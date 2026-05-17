@@ -1,62 +1,85 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
-/**
- * Custom hook for data fetching with AbortController cleanup.
- * Pass null or empty string to skip fetching.
- * Returns { data, loading, error }
- */
+const token = import.meta.env.VITE_GITHUB_TOKEN
+
+function fetchJson(url, signal) {
+  const options = { signal }
+  if (token && url.includes('api.github.com')) {
+    options.headers = { Authorization: `Bearer ${token}` }
+  }
+  return fetch(url, options).then((res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+    return res.json()
+  })
+}
+
 export default function useFetch(url) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const isGitHub = url && url.includes('api.github.com')
+  const cancelled = useRef(false)
+
+  const cached = useQuery({
+    queryKey: [url],
+    queryFn: ({ signal }) => fetchJson(url, signal),
+    enabled: isGitHub && !!url,
+    staleTime: url?.includes('/events') ? 2 * 60 * 1000 : 5 * 60 * 1000,
+  })
+
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Skip fetch if url is null or empty
+    if (isGitHub) return
+    cancelled.current = false
+
     if (!url) {
-      let cancelled = false
       queueMicrotask(() => {
-        if (cancelled) return
-        setData(null)
-        setLoading(false)
-        setError(null)
+        if (!cancelled.current) {
+          setData(null)
+          setLoading(false)
+          setError(null)
+        }
       })
-      return () => {
-        cancelled = true
+      return () => { cancelled.current = true }
+    }
+
+    const controller = new AbortController()
+
+    const doFetch = async () => {
+      if (cancelled.current) return
+      setLoading(true)
+      setError(null)
+      try {
+        const json = await fetchJson(url, controller.signal)
+        if (!cancelled.current) {
+          setData(json)
+          setLoading(false)
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return
+        if (!cancelled.current) {
+          setError(err.message)
+          setLoading(false)
+        }
       }
     }
 
-    const controller = new AbortController();
+    doFetch()
 
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
+    return () => {
+      cancelled.current = true
+      controller.abort()
+    }
+  }, [url, isGitHub])
 
-      try {
-        const options = { signal: controller.signal }
-        const token = import.meta.env.VITE_GITHUB_TOKEN
-        if (token && url.includes('api.github.com')) {
-          options.headers = { Authorization: `Bearer ${token}` }
-        }
-        const response = await fetch(url, options);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        const json = await response.json();
-        setData(json);
-        setLoading(false);
-      } catch (err) {
-        // Ignore abort errors — they happen on cleanup
-        if (err.name === 'AbortError') return;
-        setError(err.message);
-        setLoading(false);
-      }
-    };
+  if (isGitHub) {
+    return {
+      data: cached.data ?? null,
+      loading: cached.isLoading,
+      error: cached.error?.message || null,
+    }
+  }
 
-    fetchData();
-
-    // Cancel in-flight request on cleanup or url change
-    return () => controller.abort();
-  }, [url]);
-
-  return { data, loading, error };
+  return { data, loading, error }
 }
