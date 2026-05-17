@@ -21,7 +21,6 @@ export function loadStreak() {
 export function recalcStreak(completedCount, events) {
   const activeDates = new Set()
   const today = todayStr()
-  const yesterday = yesterdayStr()
 
   // 1. Collect dates from GitHub events
   if (Array.isArray(events)) {
