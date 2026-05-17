@@ -4,12 +4,6 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function yesterdayStr() {
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return d.toISOString().slice(0, 10)
-}
-
 export function loadStreak() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
