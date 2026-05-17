@@ -540,7 +540,7 @@
   }
 
   .repos-controls {
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .repo-filter {
