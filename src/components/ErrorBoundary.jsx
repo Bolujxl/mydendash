@@ -21,6 +21,11 @@ class ErrorBoundary extends Component {
           <div className="error-boundary-card">
             <h1>Something went wrong</h1>
             <p>An unexpected error occurred. Please try reloading the page.</p>
+            {this.state.error && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem', wordBreak: 'break-word' }}>
+                {this.state.error.message}
+              </p>
+            )}
             <button onClick={() => window.location.reload()}>
               Reload page
             </button>
