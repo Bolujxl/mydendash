@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   FolderGit2, Users, Star, CheckCircle2, GitFork,
   ChevronRight
@@ -46,9 +47,51 @@ function Dashboard() {
     ? `https://api.github.com/users/${savedUsername}/events?per_page=30`
     : null
 
-  const { data: profile, loading: profileLoading, error: profileError } = useFetch(profileUrl)
-  const { data: repos, loading: reposLoading } = useFetch(reposUrl)
-  const { data: events } = useFetch(eventsUrl)
+  const token = import.meta.env.VITE_GITHUB_TOKEN
+
+  const { data: profile, isLoading: profileLoading, error: profileErr } = useQuery({
+    queryKey: ['profile', savedUsername],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(profileUrl, {
+        signal,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      return res.json()
+    },
+    enabled: !!savedUsername,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: repos, isLoading: reposLoading } = useQuery({
+    queryKey: ['repos', savedUsername],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(reposUrl, {
+        signal,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      return res.json()
+    },
+    enabled: !!savedUsername,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: events } = useQuery({
+    queryKey: ['events', savedUsername],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(eventsUrl, {
+        signal,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      return res.json()
+    },
+    enabled: !!savedUsername,
+    staleTime: 2 * 60 * 1000,
+  })
+
+  const profileError = profileErr?.message || null
 
   const totalStars = Array.isArray(repos)
     ? repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0)

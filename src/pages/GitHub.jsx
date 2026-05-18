@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Search, Loader2, MapPin, Users, FolderGit2, Globe,
   ChevronRight, X
 } from 'lucide-react'
-import useFetch from '../hooks/useFetch'
 import RepoCard from '../components/RepoCard'
 import '../styles/GitHub.css'
 
@@ -27,9 +27,38 @@ function GitHub() {
   const reposUrl = searchedUser
     ? `https://api.github.com/users/${searchedUser}/repos?per_page=100&sort=updated`
     : null
+  const token = import.meta.env.VITE_GITHUB_TOKEN
 
-  const { data: profile, loading: profileLoading, error: profileError } = useFetch(profileUrl)
-  const { data: repos, loading: reposLoading, error: reposError } = useFetch(reposUrl)
+  const { data: profile, isLoading: profileLoading, error: profileErr } = useQuery({
+    queryKey: ['gh-profile', searchedUser],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(profileUrl, {
+        signal,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
+    },
+    enabled: !!searchedUser,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: repos, isLoading: reposLoading, error: reposErr } = useQuery({
+    queryKey: ['gh-repos', searchedUser],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(reposUrl, {
+        signal,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
+    },
+    enabled: !!searchedUser,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const profileError = profileErr?.message || null
+  const reposError = reposErr?.message || null
 
   const handleSearch = (e) => {
     e.preventDefault()

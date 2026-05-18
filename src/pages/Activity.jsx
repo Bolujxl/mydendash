@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Activity, Calendar, Code, Star } from 'lucide-react'
-import useFetch from '../hooks/useFetch'
 import CommitHeatmap from '../components/CommitHeatmap'
 import { getLangColor } from '../utils/langColors'
 import '../styles/Activity.css'
@@ -31,9 +31,33 @@ function getRelativeTime(dateStr) {
 function ActivityPage() {
   const eventsUrl = `https://api.github.com/users/${GH_USER}/events?per_page=100`
   const reposUrl = `https://api.github.com/users/${GH_USER}/repos?per_page=100`
+  const token = import.meta.env.VITE_GITHUB_TOKEN
 
-  const { data: events, loading: evLoading } = useFetch(eventsUrl)
-  const { data: repos } = useFetch(reposUrl)
+  const { data: events, isLoading: evLoading } = useQuery({
+    queryKey: ['events', GH_USER],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(eventsUrl, {
+        signal,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
+    },
+    staleTime: 2 * 60 * 1000,
+  })
+
+  const { data: repos } = useQuery({
+    queryKey: ['repos', GH_USER],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(reposUrl, {
+        signal,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
+    },
+    staleTime: 5 * 60 * 1000,
+  })
 
   const [sortKey, setSortKey] = useState('pushed')
   const [sortDir, setSortDir] = useState('desc')
