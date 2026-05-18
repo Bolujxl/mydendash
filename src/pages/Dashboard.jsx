@@ -4,7 +4,6 @@ import {
   FolderGit2, Users, Star, CheckCircle2, GitFork,
   ChevronRight
 } from 'lucide-react'
-import useFetch from '../hooks/useFetch'
 import WeatherWidget from '../components/WeatherWidget'
 import ActivityFeed from '../components/ActivityFeed'
 import ContributionChart from '../components/ContributionChart'
