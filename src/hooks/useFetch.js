@@ -1,5 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect, useRef } from 'react'
 
 const token = import.meta.env.VITE_GITHUB_TOKEN
 
@@ -15,22 +14,12 @@ function fetchJson(url, signal) {
 }
 
 export default function useFetch(url) {
-  const isGitHub = url && url.includes('api.github.com')
-  const cancelled = useRef(false)
-
-  const cached = useQuery({
-    queryKey: [url],
-    queryFn: ({ signal }) => fetchJson(url, signal),
-    enabled: isGitHub && !!url,
-    staleTime: url?.includes('/events') ? 2 * 60 * 1000 : 5 * 60 * 1000,
-  })
-
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const cancelled = useRef(false)
 
   useEffect(() => {
-    if (isGitHub) return
     cancelled.current = false
 
     if (!url) {
@@ -71,15 +60,7 @@ export default function useFetch(url) {
       cancelled.current = true
       controller.abort()
     }
-  }, [url, isGitHub])
-
-  if (isGitHub) {
-    return {
-      data: cached.data ?? null,
-      loading: cached.isLoading,
-      error: cached.error?.message || null,
-    }
-  }
+  }, [url])
 
   return { data, loading, error }
 }
