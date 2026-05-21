@@ -18,9 +18,9 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/github" element={<GitHub />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/activity" element={<Activity />} />
-            <Route path="*" element={<NotFound />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/activity" element={<Activity />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
         </main>

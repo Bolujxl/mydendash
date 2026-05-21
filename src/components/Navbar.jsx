@@ -16,6 +16,7 @@ function Navbar() {
         className="sidebar-hamburger"
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Toggle menu"
+        aria-expanded={open}
       >
         <Menu size={20} />
       </button>

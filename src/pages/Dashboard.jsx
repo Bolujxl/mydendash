@@ -328,7 +328,7 @@ function Dashboard() {
             </div>
 
             <div className="stat-cards-row bento-stats">
-              <StreakCard completedCount={completedCount} events={events} />
+              <StreakCard events={events} />
               <div className="stat-card stat-card--green">
                 <div className="stat-card-icon-wrap">
                   <CheckCircle2 size={20} />

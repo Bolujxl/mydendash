@@ -26,8 +26,8 @@ class ErrorBoundary extends Component {
                 {this.state.error.message}
               </p>
             )}
-            <button onClick={() => window.location.reload()}>
-              Reload page
+            <button onClick={this.handleReload}>
+              Try again
             </button>
           </div>
         </div>

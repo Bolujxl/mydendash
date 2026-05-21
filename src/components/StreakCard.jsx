@@ -21,8 +21,8 @@ function FlameIcon({ glowing }) {
   )
 }
 
-function StreakCard({ completedCount, events }) {
-  const streak = useMemo(() => recalcStreak(completedCount, events), [completedCount, events])
+function StreakCard({ events }) {
+  const streak = useMemo(() => recalcStreak(events), [events])
   const copy = getStreakCopy(streak.currentStreak)
   const glowing = streak.current >= 7
 

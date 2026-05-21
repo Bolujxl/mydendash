@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { ThemeContext } from './ThemeContext'
 
 const STORAGE_KEY = 'devdash_theme'
@@ -21,12 +21,14 @@ export function ThemeProvider({ children }) {
     } catch { /* noop */ }
   }, [theme])
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
-  }
+  }, [])
+
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme])
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   )

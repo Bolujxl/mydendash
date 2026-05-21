@@ -12,7 +12,7 @@ export function loadStreak() {
   return { current: 0, longest: 0, lastDate: null }
 }
 
-export function recalcStreak(completedCount, events) {
+export function recalcStreak(events) {
   const activeDates = new Set()
   const today = todayStr()
 

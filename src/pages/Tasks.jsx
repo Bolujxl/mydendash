@@ -69,7 +69,6 @@ function Tasks() {
   const doneCount = tasks.filter((t) => t.done).length
   const activeCount = tasks.filter((t) => !t.done).length
   const allCount = tasks.length
-  const completedCount = tasks.filter((t) => t.done).length
 
   return (
     <div className="tasks-page">
@@ -113,7 +112,7 @@ function Tasks() {
         {[
           { key: 'all', label: 'All', count: allCount },
           { key: 'active', label: 'Active', count: activeCount },
-          { key: 'completed', label: 'Completed', count: completedCount },
+          { key: 'completed', label: 'Completed', count: doneCount },
         ].map((tab) => (
           <button
             key={tab.key}
