@@ -1,154 +1,85 @@
-# App.jsx — Principles, Audit & Social Positioning
+# myDen — Engineering Audit
 
 ---
 
-## Part 1 — Software Engineering Principles Applied
+## Principles Applied
 
-### 1. Single Responsibility Principle (SRP)
-`App.jsx` does exactly one thing: it composes the layout shell and declares routes. It does not fetch data, manage state, or contain business logic. Each child (`Navbar`, `Dashboard`, `GitHub`, etc.) owns its own responsibility.
-
-### 2. Separation of Concerns
-- **Routing** is delegated to `react-router-dom` (`Routes`/`Route`)
-- **Error recovery** is delegated to `ErrorBoundary` (class component, catches render crashes)
-- **Navigation UI** is isolated in `Navbar` (sidebar component, lazy-loaded mobile overlay)
-- **Page content** lives in `pages/` — the App has zero knowledge of what any page renders
-
-### 3. Composition over Inheritance
-The layout is composed, not inherited:
-```
-ErrorBoundary
-  └── div.app
-        ├── Navbar (persistent shell)
-        └── main.main-content
-              └── div.content-wrapper
-                    └── Routes (swappable page content)
-```
-No base class, no `extends`. Every piece is a composable function.
-
-### 4. Defensive Rendering
-- `ErrorBoundary` wraps the entire tree — any uncaught render error shows a recovery UI instead of a white screen
-- `NotFound` route (`path="*"`) catches unmatched URLs gracefully
-- `Navbar` is outside `<Routes>` — it never unmounts during navigation, preventing layout jitter
-
-### 5. Declarative Routing
-Routes are declared as JSX, not imperatively configured. The URL is the source of truth for what renders. `path="/", "/github", "/tasks", "/activity", "*"` is self-documenting.
-
-### 6. CSS Co-location
-`./App.css` is imported at the component level (line 9). Vite's CSS modules guarantee no global namespace pollution while keeping styles scoped to the App shell.
-
-### 7. Lazy Evaluation (Indirect)
-Page components (`Dashboard`, `GitHub`, etc.) are imported statically but only rendered when their route matches. React Router unmounts non-matching routes, freeing memory. This is not `React.lazy()` but achieves similar runtime efficiency for a 4-page SPA.
-
-### 8. Pure Component
-`App` is a pure function — given the same props (none), it always returns the same JSX tree. No side effects, no state, no hooks. This makes it trivially testable and never the source of re-render bugs.
+| Principle | Where | How |
+|---|---|---|
+| **Single Responsibility** | Every file | `useFetch` only fetches. `streakUtils` only calculates streaks. `Navbar` only renders navigation. Each page owns one route. |
+| **Separation of Concerns** | `src/` structure | `hooks/` (data), `utils/` (pure functions), `context/` (theme), `components/` (UI), `pages/` (composition), `styles/` (CSS) |
+| **Composition over Inheritance** | `App.jsx` + pages | ErrorBoundary wraps app. Pages compose components (Dashboard composes WeatherWidget, ActivityFeed, StreakCard, ContributionChart). No class inheritance. |
+| **Custom Hooks** | `useFetch`, `useTheme` | Encapsulate fetch lifecycle (AbortController + cleanup) and theme access (context + guard clause) |
+| **Context API** | `ThemeProvider` | Dark/light mode propagated via React Context, synced to `data-theme` on `<html>` |
+| **useMemo for Derived Data** | Dashboard, GitHub, CommitHeatmap, ContributionChart | `uniqueLanguages`, `filteredEvents`, `contributionStats`, `filteredRepos`, `sortedRepos` — all memoized to avoid recomputation |
+| **CSS Custom Properties** | `index.css` | 40+ design tokens (`--bg-root`, `--text-primary`, `--accent`, etc.) driving both themes via `[data-theme="dark"]` |
+| **Declarative Routing** | `App.jsx` | React Router v7 `<Routes>/<Route>` — URL is source of truth |
+| **Defensive Rendering** | ErrorBoundary, NotFound | Crash recovery + 404 catch-all |
+| **TanStack Query** | Dashboard, GitHub, Activity | Stale-while-revalidate caching. Profile/repos: 5min stale. Events: 2min stale. |
+| **AbortController** | `useFetch` | Cancels in-flight requests on unmount or URL change |
+| **Pure Utility Modules** | `streakUtils`, `langColors` | No React imports — side-effect-free, testable functions |
+| **Date-Based Computation** | `streakUtils` | Streak computed fresh from active dates Set, counting backwards — no mutable localStorage counter |
 
 ---
 
-## Part 2 — Flaws & Bad Practices
+## Flaws Found
 
-### Flaw 1: Inconsistent indentation (Line 21-22)
-```jsx
-<Route path="/" element={<Dashboard />} />
-<Route path="/github" element={<GitHub />} />
-<Route path="/tasks" element={<Tasks />} />        // ← correct indent
-<Route path="/activity" element={<Activity />} />   // ← misaligned (2 spaces off)
-```
-**Impact**: Cognitive overhead when scanning routes. Fix: align to parent `<Routes>` indent.
+### Critical
 
-### Flaw 2: No code splitting
-All 5 page components are statically imported. On first load, the browser downloads Dashboard, GitHub, Tasks, Activity, and NotFound — even though the user only sees one.
-**Impact**: Larger initial bundle, slower Time-to-Interactive. Fix:
-```jsx
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const GitHub = lazy(() => import('./pages/GitHub'))
-// ... wrap Routes in <Suspense fallback={<Spinner />}>
-```
+| # | Issue | Files | Impact |
+|---|---|---|---|
+| 1 | **Stale `GH_USER` on Activity page** | `Activity.jsx:8` | IIFE reads localStorage once at module load. Username changes on Dashboard never reach Activity page without full reload. |
+| 2 | **Stale `completedCount` on Dashboard** | `Dashboard.jsx:25` | Lazy initializer runs once. Tasks completed on `/tasks` don't update the Dashboard stat. |
+| 3 | **`window.location.reload()` on username switch** | `Dashboard.jsx:130` | Pill editor triggers full page reload. Should use `queryClient.invalidateQueries()` instead. |
+| 4 | **Logic bug in codeStats** | `Activity.jsx:69` | `pushTotal` counts ALL events, but day breakdown uses 30-day cutoff. `avgCommits = pushTotal / 4` mixes unfiltered total with "per week" label. |
+| 5 | **WCAG contrast failure in light mode** | `index.css` | `--text-muted: #8b959e` on `#ffffff` = ~3.3:1 ratio. Fails AA (4.5:1 minimum). |
 
-### Flaw 3: `div.content-wrapper` is redundant
-The `main.main-content` already handles layout (flexbox centering). The inner `div.content-wrapper` adds an extra DOM node with `max-width` — but `main.main-content` could carry that CSS rule directly.
-**Impact**: One unnecessary DOM node per render. Minor, but avoidable.
+### Medium
 
-### Flaw 4: No `<Suspense>` boundary
-If page components were lazy-loaded, there's no fallback UI during loading. Currently harmless (static imports), but reveals missing infrastructure for future code splitting.
+| # | Issue | Files | Fix |
+|---|---|---|---|
+| 6 | **Unstable ThemeProvider value** | `ThemeProvider.jsx` | `{ theme, toggleTheme }` recreated every render. Wrap in `useMemo([theme])`. |
+| 7 | **Two `getRelativeTime` implementations** | `ActivityFeed.jsx`, `Activity.jsx` | One returns "5m ago", the other "today". Consolidate into `src/utils/time.js`. |
+| 8 | **`useFetch` never used by pages** | Dashboard, GitHub, Activity | All 3 pages inline their own `fetch`. The hook is only used by WeatherWidget. |
+| 9 | **Duplicate derived variable** | `Tasks.jsx:69,72` | `doneCount` and `completedCount` compute identical value. |
+| 10 | **ErrorBoundary: dead `handleReload`** | `ErrorBoundary.jsx:13` | Method defined but never wired. Recovery uses `window.location.reload()`. |
+| 11 | **`completedCount` param unused** | `streakUtils.js:21` | `recalcStreak(completedCount, events)` — first param never read. |
+| 12 | **No `useMemo` on `totalStars`** | `Dashboard.jsx:95` | Recalculates on every render. Should be memoized. |
 
-### Flaw 5: ErrorBoundary catches only render errors
-`ErrorBoundary` (`getDerivedStateFromError`) does NOT catch:
-- Event handler errors (e.g., `onClick` throws)
-- Async errors (e.g., `useEffect` failures)
-- Promise rejections not tied to render
-**Impact**: A failed API call inside `useEffect` with no `.catch()` could crash silently. Fix: add a `componentDidCatch` that logs to console or an error reporting service.
+### Low
 
-### Flaw 6: No `<Helmet>` or document title management
-The page title is set once in `index.html` as "myDen". Navigating to `/github` or `/tasks` doesn't update the browser tab title.
-**Impact**: Poor UX — all pages share the same tab title. Bookmarks and browser history become less useful.
+| # | Issue | Files |
+|---|---|---|
+| 13 | Inconsistent indentation | `App.jsx:21-22` |
+| 14 | Inline SVG bloats Navbar | `Navbar.jsx:31-56` (26-line SVG) |
+| 15 | Redundant DOM node | `App.jsx:17` (`div.content-wrapper` could merge into `main.main-content`) |
+| 16 | Scrollbar only styled for WebKit | `index.css` (no `scrollbar-width` for Firefox) |
+| 17 | Ghost profile cards not `aria-hidden` | `GitHub.jsx` |
 
-### Flaw 7: `NotFound` is imported but never analyzed
-The `*` catch-all route renders `NotFound` — but if `NotFound` itself crashes, the ErrorBoundary above it catches the error. This creates a confusing UX: a broken 404 page shows "Something went wrong" instead of "Page not found." Consider wrapping `NotFound` in its own error boundary or making it fail-safe (no data dependencies).
+### Accessibility (11 items)
 
-### Flaw 8: No analytics or logging
-There's no error reporting service (Sentry, LogRocket), no performance monitoring, and no usage analytics. For a production app, errors in the ErrorBoundary should be reported somewhere.
-**Impact**: Bugs in production are invisible to the developer.
-
----
-
-## Part 3 — Social Media Drafts
-
-### LinkedIn Post
-
-**Headline:** I built a personal developer dashboard from scratch — here's what I learned.
-
-**Body:**
-Over the last few weeks, I built **myDen** — a React dashboard that pulls live GitHub activity, manages tasks, shows weather, and tracks your coding streak.
-
-No UI library. No Tailwind. Just React 19, CSS custom properties, and a 12-column grid system I designed from scratch.
-
-**What's under the hood:**
-→ TanStack Query for API caching (5-min stale, background revalidation)
-→ Dark/light theme system with 40+ CSS variables
-→ Collapsible sidebar with mobile overlay
-→ Custom `useFetch` hook with AbortController cleanup
-→ Streak tracking from GitHub Events API
-→ Contribution heatmap built from event data
-
-**Three things building this taught me:**
-1. **Design tokens pay off immediately.** Standardizing spacing (4px base), radius (4/8/12px), and shadows into CSS variables made every new component look native.
-2. **Error boundaries are not optional.** One missing import crashed the entire app. Wrapping `<App />` in an error boundary saved me during development and will save users in production.
-3. **Caching changes everything.** Moving from raw `fetch` to `useQuery` cut perceived load time from 2 seconds to near-zero on repeat visits.
-
-**Stack:** React 19 · Vite · React Router v7 · TanStack Query · Lucide · GitHub REST API
-
-Repo in comments. Open to feedback — especially from engineers who've built dashboards at scale.
-
-[link to repo]
+| # | Issue | Files |
+|---|---|---|
+| A1 | No `aria-expanded` on hamburger | `Navbar.jsx` |
+| A2 | Heatmap cells not keyboard-operable | `ContributionChart.jsx`, `CommitHeatmap.jsx` |
+| A3 | Sortable table headers not keyboard-operable | `Activity.jsx` |
+| A4 | No `aria-pressed`/`aria-selected` on toggle buttons | ActivityFeed, Tasks, GitHub filters |
+| A5 | Missing `<label>` on search inputs | GitHub.jsx |
+| A6 | Missing `<label>` on task inputs | Tasks.jsx |
+| A7 | No `role="alert"` on error container | ErrorBoundary.jsx |
+| A8 | No skip-to-content link | App.jsx |
+| A9 | No `prefers-reduced-motion` support | index.css |
+| A10 | Activity list not `<ul>/<li>` | ActivityFeed.jsx |
+| A11 | Light mode contrast failure | index.css (see Critical #5) |
 
 ---
 
-### Twitter Draft
+## Quick Wins (30 minutes)
 
-Built a developer dashboard in React. No UI framework — just CSS variables and a grid system.
+1. Fix `ThemeProvider` unstable value — wrap in `useMemo`
+2. Remove duplicate `doneCount`/`completedCount` in Tasks
+3. Wire `handleReload` to ErrorBoundary's "Try Again" button
+4. Add `aria-expanded` to hamburger button
+5. Run Prettier on App.jsx to fix indentation
+6. Remove unused `completedCount` param from `recalcStreak`
 
-Highlights:
-→ Live GitHub activity feed
-→ Streak tracking (Duolingo-style, from Events API)
-→ 30-day contribution heatmap
-→ Dark/light mode with 40+ CSS custom properties
-→ TanStack Query caching (instant page loads)
-
-Been a great learning vehicle for design tokens, error boundaries, and API caching patterns.
-
-Stack: React 19 · Vite · TanStack Query · GitHub REST API
-
-Open to code review 👇
-[repo link]
-
----
-
-### Twitter (Alternative — shorter, more human)
-
-Spent a few weeks building a dashboard for myself. Pulls my GitHub activity, tracks my tasks, shows a coding streak.
-
-Most valuable lesson: just because you *can* re-fetch data every page visit doesn't mean you *should*. TanStack Query made the app feel 10x faster.
-
-Also: design tokens > any UI library. Change one variable, change the whole app.
-
-[repo link]
