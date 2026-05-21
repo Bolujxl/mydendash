@@ -37,7 +37,7 @@ function Navbar() {
             aria-label="myDen logo"
             className="sidebar-logo-svg"
           >
-            <rect x="2" y="2" width="36" height="36" rx="9" fill="#000d1a" />
+            <rect x="2" y="2" width="36" height="36" rx="9" className="logo-bg" />
             <line x1="4" y1="10" x2="36" y2="10" stroke="#4a5568" strokeWidth="1" strokeLinecap="round" />
             <line x1="7" y1="10" x2="7" y2="7.5" stroke="#4a5568" strokeWidth="0.8" strokeLinecap="round" />
             <line x1="12" y1="10" x2="12" y2="8" stroke="#4a5568" strokeWidth="0.8" strokeLinecap="round" />
@@ -45,7 +45,7 @@ function Navbar() {
             <line x1="22" y1="10" x2="22" y2="8" stroke="#4a5568" strokeWidth="0.8" strokeLinecap="round" />
             <line x1="27" y1="10" x2="27" y2="7.5" stroke="#4a5568" strokeWidth="0.8" strokeLinecap="round" />
             <line x1="32" y1="10" x2="32" y2="8" stroke="#4a5568" strokeWidth="0.8" strokeLinecap="round" />
-            <rect x="5" y="10" width="30" height="24" rx="3" fill="#000912" stroke="#00a1e0" strokeWidth="1.2" />
+            <rect x="5" y="10" width="30" height="24" rx="3" className="logo-room" stroke="#00a1e0" strokeWidth="1.2" />
             <circle cx="15" cy="19" r="3" fill="currentColor" />
             <rect x="13" y="22" width="4" height="6" rx="1.5" fill="currentColor" />
             <rect x="13" y="26" width="2" height="4" rx="1" fill="currentColor" />
@@ -59,7 +59,7 @@ function Navbar() {
             <div className="app-name">
               <span className="app-name-my">my</span>Den
             </div>
-            
+
           </div>
         </div>
 
@@ -87,22 +87,22 @@ function Navbar() {
               <GitBranch size={17} />
               <span>GitHub</span>
             </NavLink>
-          <NavLink
-            to="/tasks"
-            className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}
-            onClick={close}
-          >
-            <ClipboardList size={18} />
-            <span>Tasks</span>
-          </NavLink>
-          <NavLink
-            to="/activity"
-            className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}
-            onClick={close}
-          >
-            <Activity size={18} />
-            <span>Activity</span>
-          </NavLink>
+            <NavLink
+              to="/tasks"
+              className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}
+              onClick={close}
+            >
+              <ClipboardList size={18} />
+              <span>Tasks</span>
+            </NavLink>
+            <NavLink
+              to="/activity"
+              className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}
+              onClick={close}
+            >
+              <Activity size={18} />
+              <span>Activity</span>
+            </NavLink>
           </div>
         </nav>
 
