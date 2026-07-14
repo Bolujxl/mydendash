@@ -9,9 +9,9 @@ import '../styles/GitHub.css'
 
 const GHOST_PROFILES = [
   { name: 'Linus Torvalds', login: 'torvalds', repos: 42, followers: '180k' },
-  { name: 'Dan Abramov',    login: 'gaearon',  repos: 67, followers: '89k'  },
-  { name: 'Sindre Sorhus',  login: 'sindresorhus', repos: 1200, followers: '45k' },
-  { name: 'Addy Osmani',    login: 'addyosmani', repos: 88, followers: '30k' },
+  { name: 'Dan Abramov', login: 'gaearon', repos: 67, followers: '89k' },
+  { name: 'Sindre Sorhus', login: 'sindresorhus', repos: 1200, followers: '45k' },
+  { name: 'Addy Osmani', login: 'addyosmani', repos: 88, followers: '30k' },
 ]
 
 function GitHub() {
@@ -27,15 +27,10 @@ function GitHub() {
   const reposUrl = searchedUser
     ? `https://api.github.com/users/${searchedUser}/repos?per_page=100&sort=updated`
     : null
-  const token = import.meta.env.VITE_GITHUB_TOKEN
-
   const { data: profile, isLoading: profileLoading, error: profileErr } = useQuery({
     queryKey: ['gh-profile', searchedUser],
     queryFn: async ({ signal }) => {
-      const res = await fetch(profileUrl, {
-        signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
+      const res = await fetch(profileUrl, { signal })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return res.json()
     },
@@ -46,10 +41,7 @@ function GitHub() {
   const { data: repos, isLoading: reposLoading, error: reposErr } = useQuery({
     queryKey: ['gh-repos', searchedUser],
     queryFn: async ({ signal }) => {
-      const res = await fetch(reposUrl, {
-        signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
+      const res = await fetch(reposUrl, { signal })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return res.json()
     },
@@ -107,7 +99,7 @@ function GitHub() {
 
       {!searchedUser ? (
         <div className="gh-hero-wrapper">
-          <div className="gh-ghost-cards">
+          <div className="gh-ghost-cards" aria-hidden="true">
             {GHOST_PROFILES.map((p, i) => (
               <div key={p.login} className={`gh-ghost-card gh-ghost-${i}`}>
                 <div className="gh-ghost-avatar" />
@@ -128,11 +120,13 @@ function GitHub() {
               <div className="gh-hero-input-wrap">
                 <Search size={18} className="gh-hero-search-icon" />
                 <input
+                  id="gh-search-input"
                   type="text"
                   className="gh-hero-input"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="username"
+                  aria-label="GitHub username search"
                 />
                 <span className="gh-hero-kbd">⏎</span>
               </div>
@@ -169,6 +163,7 @@ function GitHub() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Search another user..."
+              aria-label="Search another GitHub user"
             />
           </form>
 
@@ -218,11 +213,13 @@ function GitHub() {
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     placeholder="Filter repos by name..."
+                    aria-label="Filter repositories by name"
                   />
                   <select
                     className="repo-sort"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
+                    aria-label="Sort repositories by"
                   >
                     <option value="updated">Recent</option>
                     <option value="stars">Stars</option>
@@ -238,6 +235,7 @@ function GitHub() {
                       key={lang}
                       className={`lang-pill ${selectedLangs.includes(lang) ? 'active' : ''}`}
                       onClick={() => toggleLang(lang)}
+                      aria-pressed={selectedLangs.includes(lang)}
                     >
                       {selectedLangs.includes(lang) && <X size={10} />}
                       {lang}

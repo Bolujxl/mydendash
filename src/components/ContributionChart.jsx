@@ -61,8 +61,19 @@ function ContributionChart({ events }) {
               <div
                 key={day.date}
                 className={`heatmap-cell heatmap-int-${getIntensity(day.count, max)} ${day.count > 0 ? 'has-data' : ''}`}
+                role="button"
+                tabIndex={0}
+                aria-label={`${day.label} — ${day.count} event${day.count !== 1 ? 's' : ''}`}
                 onMouseEnter={() => setHovered(day)}
                 onMouseLeave={() => setHovered(null)}
+                onFocus={() => setHovered(day)}
+                onBlur={() => setHovered(null)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setHovered((h) => h?.date === day.date ? null : day)
+                  }
+                }}
               />
             ))}
           </div>

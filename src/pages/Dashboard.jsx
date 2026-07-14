@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useMemo, useEffect, useContext } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  FolderGit2, Users, Star, CheckCircle2, GitFork,
+  FolderGit2, Star, CheckCircle2, GitFork,
   ChevronRight
 } from 'lucide-react'
+import { GithubUserContext } from '../context/GithubUserContext'
 import WeatherWidget from '../components/WeatherWidget'
 import ActivityFeed from '../components/ActivityFeed'
 import ContributionChart from '../components/ContributionChart'
@@ -12,29 +13,33 @@ import Silk from '../components/Silk'
 import { getLangColor } from '../utils/langColors'
 import '../styles/Dashboard.css'
 
-const GH_USER_KEY = 'devdash_github_user'
-
-function getSavedUsername() {
+function readCompletedCount() {
   try {
-    return localStorage.getItem(GH_USER_KEY) || 'bolujxl'
+    const tasks = JSON.parse(localStorage.getItem('devdash_tasks')) || []
+    return tasks.filter((t) => t.done).length
   } catch {
-    return 'bolujxl'
+    return 0
   }
 }
 
 function Dashboard() {
-  const [completedCount] = useState(() => {
-    try {
-      const tasks = JSON.parse(localStorage.getItem('devdash_tasks')) || []
-      return tasks.filter((t) => t.done).length
-    } catch {
-      return 0
-    }
-  })
+  const queryClient = useQueryClient()
+  const { username: savedUsername, setUsername, clearUsername } = useContext(GithubUserContext)
   const [usernameInput, setUsernameInput] = useState('')
-  const [savedUsername, setSavedUsername] = useState(getSavedUsername)
   const [editing, setEditing] = useState(false)
   const [pillInput, setPillInput] = useState('')
+
+  // P3 fix: reactive completedCount via storage event listener
+  const [completedCount, setCompletedCount] = useState(readCompletedCount)
+  useEffect(() => {
+    const update = () => setCompletedCount(readCompletedCount())
+    window.addEventListener('storage', update)
+    window.addEventListener('focus', update)
+    return () => {
+      window.removeEventListener('storage', update)
+      window.removeEventListener('focus', update)
+    }
+  }, [])
 
   const profileUrl = savedUsername
     ? `https://api.github.com/users/${savedUsername}`
@@ -46,15 +51,10 @@ function Dashboard() {
     ? `https://api.github.com/users/${savedUsername}/events?per_page=30`
     : null
 
-  const token = import.meta.env.VITE_GITHUB_TOKEN
-
   const { data: profile, isLoading: profileLoading, error: profileErr } = useQuery({
     queryKey: ['profile', savedUsername],
     queryFn: async ({ signal }) => {
-      const res = await fetch(profileUrl, {
-        signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
+      const res = await fetch(profileUrl, { signal })
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
       return res.json()
     },
@@ -65,10 +65,7 @@ function Dashboard() {
   const { data: repos, isLoading: reposLoading } = useQuery({
     queryKey: ['repos', savedUsername],
     queryFn: async ({ signal }) => {
-      const res = await fetch(reposUrl, {
-        signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
+      const res = await fetch(reposUrl, { signal })
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
       return res.json()
     },
@@ -79,10 +76,7 @@ function Dashboard() {
   const { data: events } = useQuery({
     queryKey: ['events', savedUsername],
     queryFn: async ({ signal }) => {
-      const res = await fetch(eventsUrl, {
-        signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
+      const res = await fetch(eventsUrl, { signal })
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
       return res.json()
     },
@@ -92,15 +86,18 @@ function Dashboard() {
 
   const profileError = profileErr?.message || null
 
-  const totalStars = Array.isArray(repos)
-    ? repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0)
-    : 0
+  // P6 fix: memoize totalStars
+  const totalStars = useMemo(
+    () => Array.isArray(repos) ? repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0) : 0,
+    [repos]
+  )
 
   const uniqueLanguages = useMemo(() => {
     if (!Array.isArray(repos)) return 0
     const langs = new Set(repos.map((r) => r.language).filter(Boolean))
     return langs.size
   }, [repos])
+
   const recentRepos = useMemo(() => {
     if (!Array.isArray(repos)) return []
     return repos.slice(0, 4)
@@ -117,9 +114,7 @@ function Dashboard() {
 
   const contributionStats = useMemo(() => {
     if (!Array.isArray(filteredEvents)) return null
-    let pushes = 0
-    let prs = 0
-    let issues = 0
+    let pushes = 0, prs = 0, issues = 0
     for (const e of filteredEvents) {
       if (e.type === 'PushEvent') pushes++
       if (e.type === 'PullRequestEvent' && e.payload?.action === 'opened') prs++
@@ -130,33 +125,35 @@ function Dashboard() {
     if (prs) parts.push(`${prs} PRs`)
     if (issues) parts.push(`${issues} issues`)
     const rangeLabel = { '7d': 'last 7 days', '30d': 'last 30 days', '3mo': 'last 3 months' }
-    return parts.length ? `Recent activity: ${parts.join(' · ')} in ${rangeLabel[timeRange]}` : `No activity in ${rangeLabel[timeRange]}`
+    return parts.length
+      ? `Recent activity: ${parts.join(' · ')} in ${rangeLabel[timeRange]}`
+      : `No activity in ${rangeLabel[timeRange]}`
   }, [filteredEvents, timeRange])
 
   const handleSetUsername = (e) => {
     e.preventDefault()
     const trimmed = usernameInput.trim()
     if (!trimmed) return
-    setSavedUsername(trimmed)
+    setUsername(trimmed)
     setUsernameInput('')
-    try {
-      localStorage.setItem(GH_USER_KEY, trimmed)
-    } catch { /* noop */ }
+    queryClient.invalidateQueries({ queryKey: ['profile', trimmed] })
+    queryClient.invalidateQueries({ queryKey: ['repos', trimmed] })
+    queryClient.invalidateQueries({ queryKey: ['events', trimmed] })
   }
 
   const handleChangeUsername = () => {
-    setSavedUsername('')
-    try {
-      localStorage.removeItem(GH_USER_KEY)
-    } catch { /* noop */ }
+    clearUsername()
   }
 
+  // P4 fix: replace window.location.reload() with context + query invalidation
   const handlePillKeyDown = (e) => {
     if (e.key === 'Enter') {
       const trimmed = pillInput.trim()
       if (trimmed && trimmed !== savedUsername) {
-        try { localStorage.setItem(GH_USER_KEY, trimmed) } catch { /* noop */ }
-        window.location.reload()
+        setUsername(trimmed)
+        queryClient.invalidateQueries({ queryKey: ['profile', trimmed] })
+        queryClient.invalidateQueries({ queryKey: ['repos', trimmed] })
+        queryClient.invalidateQueries({ queryKey: ['events', trimmed] })
       }
       setEditing(false)
       setPillInput('')
@@ -288,10 +285,11 @@ function Dashboard() {
                           autoFocus
                           placeholder="github username"
                           spellCheck={false}
+                          aria-label="Switch GitHub username"
                         />
                       </div>
                     ) : (
-                      <button className="hero-username-pill" onClick={openPillEditor}>
+                      <button className="hero-username-pill" onClick={openPillEditor} aria-label="Edit GitHub username">
                         <span className="pill-edit-icon">✎</span>
                         {savedUsername}
                       </button>
@@ -305,7 +303,7 @@ function Dashboard() {
                       GitHub <ChevronRight size={14} />
                     </a>
                   </div>
-                  
+
                   <div className="hero-inline-stats">
                     <div className="inline-stat">
                       <span className="stat-val">{profile.public_repos}</span> Repos

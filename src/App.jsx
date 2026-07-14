@@ -12,17 +12,18 @@ function App() {
   return (
     <ErrorBoundary>
       <div className="app">
+        <a href="#main-content" className="skip-to-content">
+          Skip to main content
+        </a>
         <Navbar />
-        <main className="main-content">
-          <div className="content-wrapper">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/github" element={<GitHub />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/activity" element={<Activity />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
+        <main className="main-content" id="main-content">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/github" element={<GitHub />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/activity" element={<Activity />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </main>
       </div>
     </ErrorBoundary>

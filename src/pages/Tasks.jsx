@@ -78,7 +78,9 @@ function Tasks() {
       </h1>
 
       <form className="task-entry-card" onSubmit={handleAddTask} onKeyDown={handleKeyDown}>
+        <label htmlFor="task-title" className="sr-only">Task name</label>
         <input
+          id="task-title"
           type="text"
           className="task-entry-title"
           value={taskText}
@@ -86,7 +88,9 @@ function Tasks() {
           placeholder="What do you need to get done?"
           autoFocus
         />
+        <label htmlFor="task-note" className="sr-only">Task note (optional)</label>
         <input
+          id="task-note"
           type="text"
           className="task-entry-note"
           value={taskNote}
@@ -118,6 +122,7 @@ function Tasks() {
             key={tab.key}
             className={`filter-btn ${filterTab === tab.key ? 'active' : ''}`}
             onClick={() => setFilterTab(tab.key)}
+            aria-pressed={filterTab === tab.key}
           >
             {tab.label} ({tab.count})
           </button>

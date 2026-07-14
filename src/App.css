@@ -10,16 +10,29 @@
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
-  display: flex;
-  justify-content: center;
   padding: 2rem;
   min-width: 0;
-}
-
-.content-wrapper {
   max-width: var(--container-max);
   width: 100%;
-  min-width: 0;
+}
+
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  background: var(--accent);
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  z-index: 10000;
+  transition: top 0.2s ease;
+}
+
+.skip-to-content:focus {
+  top: var(--space-4);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ---- Shared Spinner ---- */
@@ -33,7 +46,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ---- Shared Typography ---- */
@@ -68,6 +83,7 @@
 }
 
 @supports (font-variation-settings: normal) {
+
   .page-title,
   .widget-title,
   .section-title {

@@ -1,9 +1,9 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Sun, CloudSun, Cloud, CloudRain, CloudLightning,
   CloudSnow, CloudFog, Wind, CloudDrizzle, Loader2
 } from 'lucide-react'
-import useFetch from '../hooks/useFetch'
 import '../styles/WeatherWidget.css'
 
 const WEATHER_CITY_KEY = 'devdash_weather_city'
@@ -36,10 +36,16 @@ function WeatherWidget() {
   const [city, setCity] = useState(getInitialCity)
   const [fetchCity, setFetchCity] = useState(getInitialCity)
 
-  const url = fetchCity
-    ? `https://wttr.in/${encodeURIComponent(fetchCity)}?format=j1`
-    : null
-  const { data, loading, error } = useFetch(url)
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ['weather', fetchCity],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`https://wttr.in/${encodeURIComponent(fetchCity)}?format=j1`, { signal })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
+    },
+    enabled: !!fetchCity,
+    staleTime: 10 * 60 * 1000,
+  })
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -84,7 +90,7 @@ function WeatherWidget() {
         </div>
       )}
 
-      {error && <p className="weather-error">Could not load weather for &quot;{fetchCity}&quot;</p>}
+      {error && <p className="weather-error">Could not load weather for &quot;{fetchCity}&quot;.</p>}
 
       {!loading && !error && weather && (
         <div className="weather-info">

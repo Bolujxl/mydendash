@@ -8,7 +8,7 @@
   --bg-hover: rgba(0, 161, 224, 0.06);
   --text-primary: #032d60;
   --text-secondary: #706e6b;
-  --text-muted: #8b959e;
+  --text-muted: #627282;
   --text-tertiary: #a0aec0;
   --border-primary: #d8dde6;
   --border-secondary: #e8ecf0;
@@ -114,6 +114,8 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 body {
@@ -161,5 +163,20 @@ textarea {
 @media (hover: hover) {
   ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
   }
 }

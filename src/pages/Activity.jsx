@@ -1,14 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useContext } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, Calendar, Code, Star } from 'lucide-react'
+import { GithubUserContext } from '../context/GithubUserContext'
 import CommitHeatmap from '../components/CommitHeatmap'
 import { getLangColor } from '../utils/langColors'
+import { getRelativeTime } from '../utils/time'
 import '../styles/Activity.css'
-
-const GH_USER = (() => {
-  try { return localStorage.getItem('devdash_github_user') || 'bolujxl' }
-  catch { return 'bolujxl' }
-})()
 
 function getActivityBadge(repo) {
   if (!repo.pushed_at) return { label: 'Dormant', class: 'dormant' }
@@ -18,28 +15,17 @@ function getActivityBadge(repo) {
   return { label: 'Dormant', class: 'dormant' }
 }
 
-function getRelativeTime(dateStr) {
-  if (!dateStr) return '—'
-  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
-  if (days === 0) return 'today'
-  if (days === 1) return 'yesterday'
-  if (days < 30) return `${days} days ago`
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`
-  return `${Math.floor(days / 365)}y ago`
-}
-
 function ActivityPage() {
-  const eventsUrl = `https://api.github.com/users/${GH_USER}/events?per_page=100`
-  const reposUrl = `https://api.github.com/users/${GH_USER}/repos?per_page=100`
-  const token = import.meta.env.VITE_GITHUB_TOKEN
+  // P2 fix: read username from shared context (reactive, no IIFE)
+  const { username: ghUser } = useContext(GithubUserContext)
+
+  const eventsUrl = `https://api.github.com/users/${ghUser}/events?per_page=100`
+  const reposUrl = `https://api.github.com/users/${ghUser}/repos?per_page=100`
 
   const { data: events, isLoading: evLoading } = useQuery({
-    queryKey: ['events', GH_USER],
+    queryKey: ['events', ghUser],
     queryFn: async ({ signal }) => {
-      const res = await fetch(eventsUrl, {
-        signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
+      const res = await fetch(eventsUrl, { signal })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return res.json()
     },
@@ -47,12 +33,9 @@ function ActivityPage() {
   })
 
   const { data: repos } = useQuery({
-    queryKey: ['repos', GH_USER],
+    queryKey: ['repos', ghUser],
     queryFn: async ({ signal }) => {
-      const res = await fetch(reposUrl, {
-        signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
+      const res = await fetch(reposUrl, { signal })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return res.json()
     },
@@ -72,6 +55,7 @@ function ActivityPage() {
     return list
   }, [repos, sortKey, sortDir])
 
+  // P5 fix: pushTotal respects the same 30-day cutoff as dayCount; avgCommits uses 4.3 weeks
   const codeStats = useMemo(() => {
     if (!Array.isArray(events)) return { topDay: '—', avgCommits: 0, topLang: '—' }
 
@@ -79,18 +63,21 @@ function ActivityPage() {
     let pushTotal = 0
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - 30)
+
     for (const e of events) {
       if (e.type === 'PushEvent') {
-        pushTotal++
         const d = new Date(e.created_at)
-        if (d > cutoff) dayCount[d.getDay()]++
+        if (d > cutoff) {
+          pushTotal++
+          dayCount[d.getDay()]++
+        }
       }
     }
+
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const maxIdx = dayCount.indexOf(Math.max(...dayCount))
-    const topDay = days[maxIdx]
-
-    const avgCommits = Math.round(pushTotal / 4)
+    const topDay = dayCount[maxIdx] > 0 ? days[maxIdx] : '—'
+    const avgCommits = Math.round(pushTotal / 4.3)
 
     let topLang = '—'
     if (Array.isArray(repos)) {
@@ -156,10 +143,34 @@ function ActivityPage() {
           <table className="repo-table">
             <thead>
               <tr>
-                <th className="sortable" onClick={() => toggleSort('name')}>Repository{sortArrow('name')}</th>
+                <th
+                  className="sortable"
+                  onClick={() => toggleSort('name')}
+                  aria-sort={sortKey === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && toggleSort('name')}
+                >
+                  Repository{sortArrow('name')}
+                </th>
                 <th>Language</th>
-                <th className="sortable num" onClick={() => toggleSort('stars')}>Stars{sortArrow('stars')}</th>
-                <th className="sortable" onClick={() => toggleSort('pushed')}>Last pushed{sortArrow('pushed')}</th>
+                <th
+                  className="sortable num"
+                  onClick={() => toggleSort('stars')}
+                  aria-sort={sortKey === 'stars' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && toggleSort('stars')}
+                >
+                  Stars{sortArrow('stars')}
+                </th>
+                <th
+                  className="sortable"
+                  onClick={() => toggleSort('pushed')}
+                  aria-sort={sortKey === 'pushed' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && toggleSort('pushed')}
+                >
+                  Last pushed{sortArrow('pushed')}
+                </th>
                 <th>Status</th>
               </tr>
             </thead>

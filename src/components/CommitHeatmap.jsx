@@ -73,6 +73,7 @@ function CommitHeatmap({ events }) {
               key={r}
               className={`heatmap-range-btn ${range === r ? 'active' : ''}`}
               onClick={() => setRange(r)}
+              aria-pressed={range === r}
             >
               {r}
             </button>
@@ -92,13 +93,24 @@ function CommitHeatmap({ events }) {
               <div key={wi} className="heatmap-week">
                 {Array.from({ length: 7 }).map((_, di) => {
                   const cell = week[di]
-                  if (!cell) return <div key={di} className="heatmap-cell heatmap-empty" />
+                  if (!cell) return <div key={di} className="heatmap-cell heatmap-empty" aria-hidden="true" />
                   return (
                     <div
                       key={di}
                       className={`heatmap-cell heatmap-${getIntensityClass(cell.count)} ${cell.inRange ? '' : 'dimmed'}`}
+                      role="button"
+                      tabIndex={cell.inRange ? 0 : -1}
+                      aria-label={`${cell.label} — ${cell.count} commit${cell.count !== 1 ? 's' : ''}`}
                       onMouseEnter={() => setHovered(cell)}
                       onMouseLeave={() => setHovered(null)}
+                      onFocus={() => setHovered(cell)}
+                      onBlur={() => setHovered(null)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setHovered((h) => h?.date === cell.date ? null : cell)
+                        }
+                      }}
                     />
                   )
                 })}

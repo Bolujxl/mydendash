@@ -3,23 +3,8 @@ import {
   PlusCircle, GitFork, Trash2, AlertCircle,
   MessageSquare, GitBranch
 } from 'lucide-react'
+import { getRelativeTime } from '../utils/time'
 import '../styles/ActivityFeed.css'
-
-function getRelativeTime(dateStr) {
-  const now = Date.now()
-  const then = new Date(dateStr).getTime()
-  const seconds = Math.floor((now - then) / 1000)
-
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  return `${months}mo ago`
-}
 
 function getRepoName(fullName) {
   return fullName.split('/').pop()
@@ -28,16 +13,16 @@ function getRepoName(fullName) {
 function EventIcon({ type, size = 16 }) {
   const props = { size }
   switch (type) {
-    case 'PushEvent':              return <GitCommit {...props} />
-    case 'PullRequestEvent':       return <GitPullRequest {...props} />
+    case 'PushEvent': return <GitCommit {...props} />
+    case 'PullRequestEvent': return <GitPullRequest {...props} />
     case 'PullRequestReviewEvent': return <MessageSquare {...props} />
-    case 'IssuesEvent':            return <CircleDot {...props} />
-    case 'WatchEvent':             return <Star {...props} />
-    case 'CreateEvent':            return <PlusCircle {...props} />
-    case 'DeleteEvent':            return <Trash2 {...props} />
-    case 'ForkEvent':              return <GitFork {...props} />
-    case 'MemberEvent':            return <PlusCircle {...props} />
-    default:                       return <AlertCircle {...props} />
+    case 'IssuesEvent': return <CircleDot {...props} />
+    case 'WatchEvent': return <Star {...props} />
+    case 'CreateEvent': return <PlusCircle {...props} />
+    case 'DeleteEvent': return <Trash2 {...props} />
+    case 'ForkEvent': return <GitFork {...props} />
+    case 'MemberEvent': return <PlusCircle {...props} />
+    default: return <AlertCircle {...props} />
   }
 }
 
@@ -100,6 +85,7 @@ function ActivityFeed({ events, summary, timeRange, onTimeRangeChange }) {
                 key={r}
                 className={`activity-range-btn ${timeRange === r ? 'active' : ''}`}
                 onClick={() => onTimeRangeChange(r)}
+                aria-pressed={timeRange === r}
               >
                 {r}
               </button>
@@ -111,9 +97,9 @@ function ActivityFeed({ events, summary, timeRange, onTimeRangeChange }) {
       {!events || events.length === 0 ? (
         <p className="activity-empty">No activity in this period.</p>
       ) : (
-        <div className="activity-list">
+        <ul className="activity-list">
           {events.map((event) => (
-            <div key={event.id} className={`activity-item type-${event.type}`}>
+            <li key={event.id} className={`activity-item type-${event.type}`}>
               <div className="activity-icon-wrap">
                 <EventIcon type={event.type} size={16} />
               </div>
@@ -121,9 +107,9 @@ function ActivityFeed({ events, summary, timeRange, onTimeRangeChange }) {
                 <span className="activity-message">{eventMessage(event)}</span>
               </div>
               <span className="activity-time">{getRelativeTime(event.created_at)}</span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   )

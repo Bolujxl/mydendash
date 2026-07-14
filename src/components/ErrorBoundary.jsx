@@ -18,7 +18,7 @@ class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div className="error-boundary">
-          <div className="error-boundary-card">
+          <div className="error-boundary-card" role="alert">
             <h1>Something went wrong</h1>
             <p>An unexpected error occurred. Please try reloading the page.</p>
             {this.state.error && (
