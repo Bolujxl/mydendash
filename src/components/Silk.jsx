@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { forwardRef, useRef, useMemo, useLayoutEffect } from 'react';
+import { forwardRef, useRef, useMemo, useLayoutEffect, useEffect } from 'react';
 import { Color } from 'three';
 
 const hexToNormalizedRGB = hex => {
@@ -70,6 +70,15 @@ void main() {
 
 const SilkPlane = forwardRef(function SilkPlane({ uniforms }, ref) {
   const { viewport } = useThree();
+  const reducedMotion = useRef(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reducedMotion.current = mq.matches;
+    const handler = (e) => { reducedMotion.current = e.matches };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   useLayoutEffect(() => {
     if (ref.current) {
@@ -78,7 +87,9 @@ const SilkPlane = forwardRef(function SilkPlane({ uniforms }, ref) {
   }, [ref, viewport]);
 
   useFrame((_, delta) => {
-    ref.current.material.uniforms.uTime.value += 0.1 * delta;
+    if (!reducedMotion.current) {
+      ref.current.material.uniforms.uTime.value += 0.1 * delta;
+    }
   });
 
   return (

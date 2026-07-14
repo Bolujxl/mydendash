@@ -327,7 +327,7 @@ function Dashboard() {
 
             <div className="stat-cards-row bento-stats">
               <StreakCard events={events} />
-              <div className="stat-card stat-card--green">
+              <div className="stat-card stat-card--tasks">
                 <div className="stat-card-icon-wrap">
                   <CheckCircle2 size={20} />
                 </div>
@@ -339,7 +339,7 @@ function Dashboard() {
                   <p className="stat-copy">{completedCount > 0 ? 'Keep the momentum.' : 'Ready to begin?'}</p>
                 </div>
               </div>
-              <div className="stat-card stat-card--blue">
+              <div className="stat-card stat-card--stars">
                 <div className="stat-card-icon-wrap">
                   <Star size={20} />
                 </div>
@@ -351,7 +351,7 @@ function Dashboard() {
                   <p className="stat-copy">{totalStars > 0 ? 'Your work is valued.' : 'Ship something great.'}</p>
                 </div>
               </div>
-              <div className="stat-card stat-card--purple">
+              <div className="stat-card stat-card--languages">
                 <div className="stat-card-icon-wrap">
                   <FolderGit2 size={20} />
                 </div>
